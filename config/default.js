@@ -28,7 +28,7 @@ module.exports = {
   STORE_LOGIN_URL: process.env.STORE_LOGIN_URL,
   STORE_SCAN_URL: process.env.STORE_SCAN_URL,
   STORE_CART_URL: process.env.STORE_CART_URL,
-  IS_ROBOT_ONLY: process.env.IS_ROBOT_ONLY == 'true',
+  IS_ROBOT_ONLY: process.env.IS_ROBOT_ONLY === 'true',
   corsHeaders: ["Link"],
   bodyLimit: "100kb",
   ROBOT: process.env.ROBOT,
