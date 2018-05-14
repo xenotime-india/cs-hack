@@ -1,0 +1,9 @@
+#! /app/.heroku/node/bin/node
+const config = require('config');
+const worker = require('./../worker.js');
+
+const logger = config.logger();
+
+logger.log('debug', 'Staring KEEPALIVE process..');
+
+worker.start().then(() => logger.log('debug', 'Ending KEEPALIVE process..'));

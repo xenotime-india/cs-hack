@@ -1,0 +1,4 @@
+#! /app/.heroku/node/bin/node
+const playground = require('./../playground.js');
+
+playground.start().then(() => console.log('--Process Completed--'));
