@@ -95,15 +95,15 @@ const robotProcess = async (cookieData, { link }) => {
 
     await page.waitForNavigation();
     await page.waitFor(2 * 1000);
-    //await page.click(continueBtn);
+    await page.click(continueBtn);
 
     await page.waitForNavigation();
     await page.waitFor(2 * 1000);
-    //await page.click(continueBtn);
+    await page.click(continueBtn);
 
     await page.waitForNavigation();
     await page.waitFor(2 * 1000);
-    //await page.click(continueBtn);
+    await page.click(continueBtn);
 
     await page.waitForNavigation();
     await page.waitFor(2 * 1000);
