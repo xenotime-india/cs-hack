@@ -192,56 +192,58 @@ const start = async () => {
         }
       }
 
-      logger.log('info', 'Sending Email..');
+      if(!config.IS_ROBOT_ONLY) {
+        logger.log('info', 'Sending Email..');
 
-      let notifications = await redisGetAsync('notifications') || '[]';
-      notifications = JSON.parse(notifications);
+        let notifications = await redisGetAsync('notifications') || '[]';
+        notifications = JSON.parse(notifications);
 
-      notifications.push({ timestamp : moment.utc().format(), message: newItem});
+        notifications.push({timestamp: moment.utc().format(), message: newItem});
 
-      await redisSetAsync('notifications',JSON.stringify(notifications));
+        await redisSetAsync('notifications', JSON.stringify(notifications));
 
-      logger.log('info', 'Required Notification');
-      logger.log('debug',newItem);
+        logger.log('info', 'Required Notification');
+        logger.log('debug', newItem);
 
-      const htmlBody = newItem.map(currentValue => `<li><a href="${currentValue.link}">${currentValue.name}</a></li>`).join('');
+        const htmlBody = newItem.map(currentValue => `<li><a href="${currentValue.link}">${currentValue.name}</a></li>`).join('');
 
-      const client = nodemailer.createTransport(sgTransport({
-        auth: {
-          api_user: config.SENDGRID_USERNAME,
-          api_key: config.SENDGRID_PASSWORD
-        }
-      }));
+        const client = nodemailer.createTransport(sgTransport({
+          auth: {
+            api_user: config.SENDGRID_USERNAME,
+            api_key: config.SENDGRID_PASSWORD
+          }
+        }));
 
-      const mailOptions = {
-        from: config.FROM_GMAIL_ADDRESS,
-        to: config.TO_GMAIL_ADDRESS,
-        subject: 'IMPORTANT :: CS Alert', // Subject line
-        html: `<h3>Available Item List.</h3><ui>${htmlBody}</ui>`// plain text body
-      };
+        const mailOptions = {
+          from: config.FROM_GMAIL_ADDRESS,
+          to: config.TO_GMAIL_ADDRESS,
+          subject: 'IMPORTANT :: CS Alert', // Subject line
+          html: `<h3>Available Item List.</h3><ui>${htmlBody}</ui>`// plain text body
+        };
 
-      client.sendMail(mailOptions);
+        client.sendMail(mailOptions);
 
-      let existingDevice = await redisGetAsync('devices') || '[]';
-      existingDevice = JSON.parse(existingDevice);
+        let existingDevice = await redisGetAsync('devices') || '[]';
+        existingDevice = JSON.parse(existingDevice);
 
-      logger.log('debug',existingDevice);
+        logger.log('debug', existingDevice);
 
-      const messages = existingDevice.map(device => ({
-        to: device,
-        sound: 'default',
-        title: 'Store Item available',
-        body: newItem.map(currentValue => currentValue.name).join(', ')
-      }));
+        const messages = existingDevice.map(device => ({
+          to: device,
+          sound: 'default',
+          title: 'Store Item available',
+          body: newItem.map(currentValue => currentValue.name).join(', ')
+        }));
 
-      await fetch(config.EXPO_PUSH_NOTI_URL, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messages)
-      });
+        await fetch(config.EXPO_PUSH_NOTI_URL, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messages)
+        });
+      }
     }
   }
   logger.log('info', 'End Process..');

@@ -3,34 +3,24 @@ const puppeteer = require('puppeteer');
 const request = require('request');
 const redis = require('redis');
 const {promisify} = require('util');
-const moment = require('moment');
 const config = require('config');
-const winston = require('winston');
-const fetch = require('node-fetch');
 const { isEqual, difference } = require('lodash');
 
-const logger = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)({
-      colorize: 'all',
-    }),
-  ],
+const redisClient = redis.createClient({
+  url: config.REDIS_URL
 });
+
+const logger = config.logger();
+
+const redisGetAsync = promisify(redisClient.get).bind(redisClient);
+const redisSetAsync = promisify(redisClient.set).bind(redisClient);
 
 const asyncPostRequest = promisify(request.post);
 
-const start = async () => {
+const itemToSearch = config.ITEM_LIST.split(',');
 
-  logger.log('info', 'Staring Process..');
-  const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
-    form: {
-      'customer[email]': config.STORE_USER_NAME,
-      'customer[password]': config.STORE_PASSWORD
-    }
-  });
-  logger.log('info', 'Auth request completed..');
-
-  const cookieData = response.headers['set-cookie'].map((cookie) => {
+const getCookieData = (response) => {
+  return response.headers['set-cookie'].map((cookie) => {
     return cookie.split(/[;] */).reduce((result, pairStr) => {
       const arr = pairStr.split('=');
       if (arr.length === 2) {
@@ -45,82 +35,165 @@ const start = async () => {
       return result;
     }, {});
   });
+};
 
-  console.log(cookieData);
+const robotProcess = async (cookieData, { link }) => {
+  let browser = await puppeteer.launch(config.PRODUCTION ? {args: ['--no-sandbox']} : {headless: false, devtools: true});
+  try {
+    let [ page ] = await browser.pages();
+    await page.setCookie(...cookieData);
+    await page.setDefaultNavigationTimeout(60000);
+
+    const addBtn = '.swell-buy-product-btn';
+    const yesBtn = '.jconfirm-box .btn-default';
+    const continueBtn = '.step__footer__continue-btn';
+    const checkoutBtn = '#checkout';
+
+    logger.log('info', 'Staring fake browser for robot ..');
+
+    await page.goto(link, {waitUntil: 'networkidle2'});
+
+    await page.waitFor(5 * 1000);
+
+    /*let result = await page.evaluate(async ({addBtn, yesBtn}) => {
+      await new Promise(resolve => setTimeout(resolve, 7000));
+      console.log(document.querySelector(addBtn));
+      document.querySelector(addBtn).click();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      document.querySelector(yesBtn).click();
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return {OK: 200}
+    }, {addBtn, yesBtn});
+    console.log(await result);
+    */
+
+    await page.click(addBtn);
+
+    await page.waitFor(2 * 1000);
+
+    await page.click(yesBtn);
+
+    await page.waitFor(5 * 1000);
+
+    logger.log('info', 'Add to card done & starting checkout process..');
+
+    page = await browser.newPage();
+    await page.setCookie(...cookieData);
+
+    await page.setDefaultNavigationTimeout(60000);
+    await page.goto(config.STORE_CART_URL, {waitUntil: 'networkidle2'});
+    await page.waitFor(2 * 1000);
+    await page.click(checkoutBtn);
+
+    await page.waitForNavigation();
+    await page.waitFor(2 * 1000);
+    await page.click(continueBtn);
+
+    await page.waitForNavigation();
+    await page.waitFor(2 * 1000);
+    //await page.click(continueBtn);
+
+    await page.waitForNavigation();
+    await page.waitFor(2 * 1000);
+    //await page.click(continueBtn);
+
+    await page.waitForNavigation();
+    await page.waitFor(2 * 1000);
+    //await page.click(continueBtn);
+
+    await page.waitForNavigation();
+    await page.waitFor(2 * 1000);
+
+    await browser.close();
+
+    logger.log('info', 'Ending robot');
+  }
+  catch(ex) {
+    await browser.close();
+    logger.log('error', ex);
+  }
+};
+
+const start = async () => {
+
+  logger.log('info', 'Staring Process..');
+  const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+    form: {
+      'customer[email]': config.STORE_USER_NAME,
+      'customer[password]': config.STORE_PASSWORD
+    }
+  });
+  logger.log('info', 'Auth request completed..');
+
+  const cookieData = getCookieData(response);
 
   logger.log('info', 'Staring fake browser..');
-  const newItem = [{name:'Leather & Metal Key Fob',link:'https://appirio.myshopify.com/products/leather-metal-key-fob'}];
 
-  if(config.ROBOT) {
-    const robot = JSON.parse(config.ROBOT);
+  const browser = await puppeteer.launch(config.PRODUCTION ? { args: ['--no-sandbox'] } : {headless: false, devtools: true});
+  const [ page ] = await browser.pages();
+  await page.setCookie(...cookieData);
 
-    const robotItem = newItem.find(item => item.name === robot.item);
+  await page.goto(config.STORE_SCAN_URL, {waitUntil: 'networkidle2'});
 
-    if(robotItem) {
+  const resultsSelector = '.product';
+  await page.waitForSelector(resultsSelector);
 
-      logger.log('info', 'Starting robot');
-      console.log(robotItem);
+  logger.log('info', 'Staring DOM scan..');
 
-      let browser = await puppeteer.launch({headless: false, devtools: true});
-      let page = await browser.newPage();
-      await page.setCookie(...cookieData);
+  const scanResult = await page.evaluate(({itemToSearch,resultsSelector}) => {
+    const filterData = Array.from(document.querySelectorAll(resultsSelector)).filter(item => itemToSearch.includes(item.dataset.alpha) && item.querySelectorAll('.so.icn').length == 0)
+    return filterData.length > 0 ? filterData.map(item => ({name:item.dataset.alpha,link:item.querySelector('a').href})) : null;
+  }, {itemToSearch,resultsSelector}) || [];
 
-      const addBtn = '.swell-buy-product-btn';
-      const yesBtn = '.jconfirm-box .btn-default';
+  await browser.close();
 
-      logger.log('info', 'Staring fake browser for robot ..');
+  logger.log('info', 'Scan Result..');
+  logger.log('debug', scanResult);
 
-      await page.goto(robotItem.link, {waitUntil: 'networkidle0'});
+  logger.log('info', 'Found in stock..');
+  logger.log('debug', scanResult);
 
-      await page.waitFor(2 * 1000);
+  let oldItemList = await redisGetAsync('products') || '[]';
+  oldItemList = JSON.parse(oldItemList);
 
-      await page.click(addBtn);
+  logger.log('info', 'OLD State..');
+  logger.log('debug', oldItemList);
 
-      await page.waitFor(2 * 1000);
+  if(!isEqual(scanResult.sort(), oldItemList.sort())) {
 
-      await page.click(yesBtn);
+    await redisSetAsync('products',JSON.stringify(scanResult));
+    const newItem = difference(scanResult, oldItemList);
 
-      await page.waitFor(5 * 1000);
+    if(newItem && newItem.length > 0) {
+      if(config.ROBOT) {
+        const robot = JSON.parse(config.ROBOT);
 
-      page = await browser.newPage();
-      await page.setCookie(...cookieData);
+        const robotItem = newItem.find(item => item.name === robot.item);
 
-      await page.goto('https://appirio.myshopify.com/cart',{waitUntil: 'networkidle2'});
+        if(robotItem) {
 
-      const checkoutBtn = '#checkout';
+          logger.log('info', 'Starting robot');
+          logger.log('debug',robotItem);
 
-      await page.click(checkoutBtn);
+          const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+            form: {
+              'customer[email]': robot.username,
+              'customer[password]': robot.password
+            }
+          });
+          logger.log('info', 'Auth request completed..');
 
-      await page.waitForNavigation();
-      await page.waitFor(2 * 1000);
-
-      const continueBtn = '.step__footer__continue-btn';
-
-      await page.click(continueBtn);
-
-      await page.waitForNavigation();
-      await page.waitFor(2 * 1000);
-
-      await page.click(continueBtn);
-
-      await page.waitForNavigation();
-      await page.waitFor(2 * 1000);
-
-      //await page.click(continueBtn);
-
-      //await page.waitForNavigation();
-
-      //await page.click(continueBtn);
-
-      //await page.waitForNavigation();
-
-      //await browser.close();
-
-      logger.log('info', 'Ending robot');
+          const cookieData = getCookieData(response);
+          await robotProcess(cookieData, robotItem);
+        }
+      }
     }
   }
-
   logger.log('info', 'End Process..');
 }
+//start();
 
-start();
+module.exports = {
+  start
+};
+
