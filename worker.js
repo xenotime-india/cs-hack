@@ -147,13 +147,13 @@ const start = async () => {
   });
   logger.log('info', 'Auth request completed..');
 
-  /*const cookieData = [
+  const cookieData = [
     { name: '_secure_session_id',
       value: config.SECURE_SESSION_ID,
       domain: 'appirio.myshopify.com',
-      path: '/' }];*/
+      path: '/' }];
 
-  const cookieData = getCookieData(response);
+  //const cookieData = getCookieData(response);
 
   logger.log('info', 'Staring fake browser..');
 
@@ -173,10 +173,10 @@ const start = async () => {
 
   logger.log('info', 'Staring DOM scan..');
 
-  const scanResult = await page.evaluate(({itemToSearch,resultsSelector}) => {
-    const filterData = Array.from(document.querySelectorAll(resultsSelector)).filter(item => itemToSearch.includes(item.dataset.alpha) && item.querySelectorAll('.so.icn').length == 0)
+  const scanResult = await page.$$eval(resultsSelector, (products, itemToSearch) => {
+    const filterData = products.filter(item => itemToSearch.includes(item.dataset.alpha) && item.querySelectorAll('.so.icn').length == 0)
     return filterData.length > 0 ? filterData.map(item => ({name:item.dataset.alpha,link:item.querySelector('a').href})) : null;
-  }, {itemToSearch,resultsSelector}) || [];
+  }, itemToSearch);
 
   await browser.close();
 
