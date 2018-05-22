@@ -277,7 +277,7 @@ const start = async () => {
   }
   logger.log('info', 'End Process..');
 }
-start();
+//start();
 
 module.exports = {
   start
