@@ -137,21 +137,21 @@ const robotProcess = async (cookieData, { link }) => {
 const start = async () => {
 
   logger.log('info', 'Staring Process..');
-  /*const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+  const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
     form: {
       'customer[email]': config.STORE_USER_NAME,
       'customer[password]': config.STORE_PASSWORD
     }
   });
   logger.log('info', 'Auth request completed..');
-  */
-  const cookieData = [
+
+  /*const cookieData = [
     { name: '_secure_session_id',
       value: config.SECURE_SESSION_ID,
       domain: 'appirio.myshopify.com',
-      path: '/' }];
+      path: '/' }];*/
 
-  //console.log(getCookieData(response));
+  const cookieData = getCookieData(response);
 
   logger.log('info', 'Staring fake browser..');
 
