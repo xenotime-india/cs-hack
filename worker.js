@@ -211,7 +211,7 @@ const start = async () => {
           logger.log('info', 'Starting robot');
           logger.log('debug',robotItem);
 
-          /*const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+          const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
             form: {
               'customer[email]': robot.username,
               'customer[password]': robot.password
@@ -219,7 +219,7 @@ const start = async () => {
           });
           logger.log('info', 'Auth request completed..');
 
-          const cookieData = getCookieData(response);*/
+          const cookieData = getCookieData(response);
           await robotProcess(cookieData, robotItem);
         }
       }
