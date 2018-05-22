@@ -147,13 +147,13 @@ const start = async () => {
   });
   logger.log('info', 'Auth request completed..');
 
-  const cookieData = [
+  /*const cookieData = [
     { name: '_secure_session_id',
       value: config.SECURE_SESSION_ID,
       domain: 'appirio.myshopify.com',
-      path: '/' }];
+      path: '/' }];*/
 
-  //const cookieData = getCookieData(response);
+  const cookieData = getCookieData(response);
 
   logger.log('info', 'Staring fake browser..');
 
