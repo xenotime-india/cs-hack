@@ -24,6 +24,7 @@ const asyncPostRequest = promisify(request.post);
 const itemToSearch = config.ITEM_LIST.split(',');
 
 const getCookieData = (response) => {
+  console.log(response.headers['set-cookie']);
   return response.headers['set-cookie'].map((cookie) => {
     return cookie.split(/[;] */).reduce((result, pairStr) => {
       const arr = pairStr.split('=');
@@ -46,6 +47,13 @@ const robotProcess = async (cookieData, { link }) => {
   try {
     let [ page ] = await browser.pages();
     await page.setCookie(...cookieData);
+    await page.setRequestInterception(true);
+    page.on('request', interceptedRequest => {
+      if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
+        interceptedRequest.abort();
+      else
+        interceptedRequest.continue();
+    });
     await page.setDefaultNavigationTimeout(60000);
 
     const addBtn = '.swell-buy-product-btn';
@@ -83,7 +91,13 @@ const robotProcess = async (cookieData, { link }) => {
 
     page = await browser.newPage();
     await page.setCookie(...cookieData);
-
+    await page.setRequestInterception(true);
+    page.on('request', interceptedRequest => {
+      if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
+        interceptedRequest.abort();
+      else
+        interceptedRequest.continue();
+    });
     await page.setDefaultNavigationTimeout(60000);
     await page.goto(config.STORE_CART_URL, {waitUntil: 'networkidle2'});
     await page.waitFor(2 * 1000);
@@ -123,26 +137,42 @@ const robotProcess = async (cookieData, { link }) => {
 const start = async () => {
 
   logger.log('info', 'Staring Process..');
-  const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+  /*const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
     form: {
       'customer[email]': config.STORE_USER_NAME,
       'customer[password]': config.STORE_PASSWORD
     }
   });
   logger.log('info', 'Auth request completed..');
+  */
+  const cookieData = [
+    { name: '_secure_session_id',
+      value: config.SECURE_SESSION_ID,
+      domain: 'appirio.myshopify.com',
+      path: '/' }];
 
-  const cookieData = getCookieData(response);
+  //console.log(getCookieData(response));
 
   logger.log('info', 'Staring fake browser..');
 
   const browser = await puppeteer.launch(config.PRODUCTION ? { args: ['--no-sandbox'] } : {headless: false, devtools: true});
   const [ page ] = await browser.pages();
+  await page.setRequestInterception(true);
+  page.on('request', interceptedRequest => {
+    if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
+      interceptedRequest.abort();
+    else
+      interceptedRequest.continue();
+  });
   await page.setCookie(...cookieData);
 
   await page.goto(config.STORE_SCAN_URL, {waitUntil: 'networkidle2'});
 
   const resultsSelector = '.product';
+
   await page.waitForSelector(resultsSelector);
+
+  await page.waitFor(1000);
 
   logger.log('info', 'Staring DOM scan..');
 
@@ -181,7 +211,7 @@ const start = async () => {
           logger.log('info', 'Starting robot');
           logger.log('debug',robotItem);
 
-          const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
+          /*const response = await asyncPostRequest(config.STORE_LOGIN_URL, {
             form: {
               'customer[email]': robot.username,
               'customer[password]': robot.password
@@ -189,7 +219,7 @@ const start = async () => {
           });
           logger.log('info', 'Auth request completed..');
 
-          const cookieData = getCookieData(response);
+          const cookieData = getCookieData(response);*/
           await robotProcess(cookieData, robotItem);
         }
       }

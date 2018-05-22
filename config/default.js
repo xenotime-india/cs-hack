@@ -32,5 +32,6 @@ module.exports = {
   corsHeaders: ["Link"],
   bodyLimit: "100kb",
   ROBOT: process.env.ROBOT,
+  SECURE_SESSION_ID: process.env.SECURE_SESSION_ID,
   logger: () => (logger)
 }
