@@ -42,18 +42,25 @@ const getCookieData = (response) => {
   });
 };
 
+const interceptedRequest = interceptedRequest => {
+  if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 ||
+    interceptedRequest.url().toLowerCase().indexOf('.png') > 0 ||
+    interceptedRequest.url().toLowerCase().indexOf('.woff') > 0 ||
+    interceptedRequest.url().toLowerCase().indexOf('.ttf') > 0 ||
+    interceptedRequest.url().toLowerCase().indexOf('/css?') > 0 ||
+    interceptedRequest.url().toLowerCase().endsWith('.css'))
+    interceptedRequest.abort();
+  else
+    interceptedRequest.continue();
+}
+
 const robotProcess = async (cookieData, { link }) => {
   let browser = await puppeteer.launch(config.PRODUCTION ? {args: ['--no-sandbox']} : {headless: false, devtools: true});
   try {
     let [ page ] = await browser.pages();
     await page.setCookie(...cookieData);
     await page.setRequestInterception(true);
-    page.on('request', interceptedRequest => {
-      if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
-        interceptedRequest.abort();
-      else
-        interceptedRequest.continue();
-    });
+    page.on('request', interceptedRequest);
     await page.setDefaultNavigationTimeout(60000);
 
     const addBtn = '.swell-buy-product-btn';
@@ -92,12 +99,7 @@ const robotProcess = async (cookieData, { link }) => {
     page = await browser.newPage();
     await page.setCookie(...cookieData);
     await page.setRequestInterception(true);
-    page.on('request', interceptedRequest => {
-      if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
-        interceptedRequest.abort();
-      else
-        interceptedRequest.continue();
-    });
+    page.on('request', interceptedRequest);
     await page.setDefaultNavigationTimeout(60000);
     await page.goto(config.STORE_CART_URL, {waitUntil: 'networkidle2'});
     await page.waitFor(2 * 1000);
@@ -158,12 +160,7 @@ const start = async () => {
   const browser = await puppeteer.launch(config.PRODUCTION ? { args: ['--no-sandbox'] } : {headless: false, devtools: true});
   const [ page ] = await browser.pages();
   await page.setRequestInterception(true);
-  page.on('request', interceptedRequest => {
-    if (interceptedRequest.url().toLowerCase().indexOf('.jpg') > 0 || interceptedRequest.url().toLowerCase().indexOf('.png') > 0 || interceptedRequest.url().toLowerCase().endsWith('.css'))
-      interceptedRequest.abort();
-    else
-      interceptedRequest.continue();
-  });
+  page.on('request', interceptedRequest);
   await page.setCookie(...cookieData);
 
   await page.goto(config.STORE_SCAN_URL, {waitUntil: 'networkidle2'});
@@ -280,7 +277,7 @@ const start = async () => {
   }
   logger.log('info', 'End Process..');
 }
-//start();
+start();
 
 module.exports = {
   start
