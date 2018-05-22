@@ -175,7 +175,7 @@ const start = async () => {
 
   const scanResult = await page.$$eval(resultsSelector, (products, itemToSearch) => {
     const filterData = products.filter(item => itemToSearch.includes(item.dataset.alpha) && item.querySelectorAll('.so.icn').length == 0)
-    return filterData.length > 0 ? filterData.map(item => ({name:item.dataset.alpha,link:item.querySelector('a').href})) : null;
+    return filterData.length > 0 ? filterData.map(item => ({name:item.dataset.alpha,link:item.querySelector('a').href})) : [];
   }, itemToSearch);
 
   await browser.close();
