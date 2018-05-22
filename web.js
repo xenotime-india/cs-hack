@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const api = require('./api');
 const middleware = require('./middleware');
 const config = require('config');
+const worker = require('./worker');
 
 let app = express();
 app.server = http.createServer(app);
@@ -25,7 +26,10 @@ app.use(bodyParser.json({
 app.use(middleware());
 
 // api router
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+  if(config.WEB_HACK) {
+    await worker.start();
+  }
   res.send('App is running fine..');
 });
 app.use('/api', api());
