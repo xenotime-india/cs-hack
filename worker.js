@@ -48,6 +48,7 @@ const interceptedRequest = interceptedRequest => {
     interceptedRequest.url().toLowerCase().indexOf('.woff') > 0 ||
     interceptedRequest.url().toLowerCase().indexOf('.ttf') > 0 ||
     interceptedRequest.url().toLowerCase().indexOf('/css?') > 0 ||
+    interceptedRequest.url().toLowerCase().indexOf('.css?') > 0 ||
     interceptedRequest.url().toLowerCase().endsWith('.css'))
     interceptedRequest.abort();
   else
@@ -277,7 +278,7 @@ const start = async () => {
   }
   logger.log('info', 'End Process..');
 }
-//start();
+start();
 
 module.exports = {
   start
