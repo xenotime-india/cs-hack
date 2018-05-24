@@ -277,8 +277,8 @@ const start = async () => {
     }
   }
   logger.log('info', 'End Process..');
+  return scanResult;
 }
-start();
 
 module.exports = {
   start

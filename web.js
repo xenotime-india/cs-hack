@@ -28,9 +28,10 @@ app.use(middleware());
 // api router
 app.get('/', async (req, res) => {
   if(config.WEB_HACK) {
-    await worker.start();
+    res.json(await worker.start());
+  } else {
+    res.send('App is running fine..');
   }
-  res.send('App is running fine..');
 });
 app.use('/api', api());
 
